@@ -12,14 +12,14 @@ from DNA_test import test_dna
 
 
 if __name__ == '__main__':
-    # cut64window()
-    # run_lesps()
+    cut64window()
+    run_lesps()
     print('filtering and updating...')
     filter_img()
     update_mask()
-    # run_dna()
-    # test_dna()
-    # run_trainUIU()
-    # run_test_ICPR()
+    run_dna()
+    test_dna()
+    run_trainUIU()
+    run_test_ICPR()
 
 
