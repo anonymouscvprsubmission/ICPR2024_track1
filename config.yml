@@ -1,0 +1,8 @@
+dataset:
+  root: ..
+  track1_train:
+    split_method: "idx"
+    size: 512
+    model: UIU_softiou
+    batch: 64
+    aug: 0.
