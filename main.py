@@ -12,13 +12,13 @@ from test_ICPR import run_test_ICPR
 
 
 if __name__ == '__main__':
-    # cut64window()
-    # run_lesps()
-    # print('filtering and updating...')
-    # filter_img()
-    # update_mask()
-    # run_dna()
-    # test_dna()
+    cut64window()
+    run_lesps()
+    print('filtering and updating...')
+    filter_img()
+    update_mask()
+    run_dna()
+    test_dna()
     run_trainUIU()
     run_test_ICPR()
 
