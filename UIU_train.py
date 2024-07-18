@@ -667,7 +667,9 @@ def main(args):
                             num_workers=args.workers, drop_last=True, pin_memory=True)
     train_repeat_data = DataLoader(dataset=trainrepeatset, batch_size=args.batch_size, shuffle=True,
                             num_workers=args.workers, drop_last=True, pin_memory=True)
-    val_data = DataLoader(dataset=trainset, batch_size=1, num_workers=1,
+    val_set= TestSetLoader(dataset_dir, img_id=train_img_ids, base_size=size, crop_size=size,
+                            transform=input_transform, suffix=args.suffix)
+    val_data = DataLoader(dataset=val_set, batch_size=1, num_workers=1,
                           drop_last=False)
 
     model = UIUNET(3, 1)
@@ -738,10 +740,10 @@ def main(args):
     roc = ROCMetric(1, 10)
     pdfa = PD_FA(1, 10)
     miou = mIoU(1)
-    for epoch in range(restart+1, args.epochs):
+    for epoch in range(restart + 1, args.epochs):
         if epoch % 300 <= 250:
             train_loss, current_lr, loss1, loss2 = train_one_epoch(model, optimizer, train_data, device, epoch, loss_func,)
-            if epoch % 10 == 0:
+            if epoch % 10 == 0 :
                 val_loss, iou_, niou_, miou_, ture_positive_rate, false_positive_rate, recall, precision, pd, fa = \
                          evaluate(model, val_data, device, epoch, iou_metric, niou_metric, pdfa, miou, roc, len(trainset), loss_func)
                 if iou_ > best_iou:
