@@ -1,6 +1,6 @@
 dataset:
-  root: ..
-  track1_train:
+  root: .
+  dataset:
     split_method: "idx"
     size: 512
     model: UIU_softiou

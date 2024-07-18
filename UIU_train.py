@@ -10,7 +10,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 from utils.dataset import TrainSetLoader, TestSetLoader
-# from utils.metric import SigmoidMetric, SamplewiseSigmoidMetric, PD_FA, ROCMetric, mIoU
+from utils.metric import SigmoidMetric, SamplewiseSigmoidMetric, PD_FA, ROCMetric, mIoU
 from utils.engine import train_one_epoch, evaluate
 from utils.loss import SoftLoULoss1 as SoftLoULoss
 import torch.nn.functional as F
@@ -29,6 +29,7 @@ torch.manual_seed(1)
 torch.cuda.manual_seed_all(1)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1, 0, 2, 3, 4, 5, 6, 7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1, 0"
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 resume = False
@@ -43,7 +44,7 @@ def parse_args():
     #
     parser = ArgumentParser(description='Implement of HCT model')
     #parser.add_argument('--model', type=str, default='hct_base_patch32_512', help='model_name:')
-    parser.add_argument('--dataset', type=str, default='track1_train',
+    parser.add_argument('--dataset', type=str, default='dataset',
                         help='dataset:IRSTD-1k; NUDT-SIRST; Flir; ')
     parser.add_argument('--suffix', type=str, default='.png')
     #
@@ -666,6 +667,8 @@ def main(args):
                             num_workers=args.workers, drop_last=True, pin_memory=True)
     train_repeat_data = DataLoader(dataset=trainrepeatset, batch_size=args.batch_size, shuffle=True,
                             num_workers=args.workers, drop_last=True, pin_memory=True)
+    val_data = DataLoader(dataset=trainset, batch_size=1, num_workers=1,
+                          drop_last=False)
 
     model = UIUNET(3, 1)
 
@@ -677,6 +680,7 @@ def main(args):
 
 
         print("Let's use ", torch.cuda.device_count(), " GPUs!")
+        # model = nn.DataParallel(model, device_ids=[0, 1])
         model = nn.DataParallel(model, device_ids=[0, 1, 2, 3, 4, 5, 6, 7])
 
     model = model.to(device)
@@ -705,8 +709,7 @@ def main(args):
         # scheduler.load_state_dict(ckpt["scheduler"])
         print('resuming')
 
-    best_iou = 0
-    best_nIoU = 0
+
 
 
     folder_name = '%s_%s_%s' % (time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())),
@@ -718,8 +721,8 @@ def main(args):
         os.mkdir('result')
     if not ops.exists(save_folder):
         os.mkdir(save_folder)
-    if not ops.exists(save_pkl):
-        os.mkdir(save_pkl)
+    # if not ops.exists(save_pkl):
+    #     os.mkdir(save_pkl)
     tb_writer.add_text(folder_name, 'Args:%s, ' % args)
 
     loss_func = SoftLoULoss(a=0.).to(device)
@@ -727,26 +730,45 @@ def main(args):
     last_name_niou = ' '
     if not os.path.exists(f'./result_pth'):
         os.mkdir(f'./result_pth')
+    best_iou = 0
+    best_iou_repeat = 0
+
+    iou_metric = SigmoidMetric()
+    niou_metric = SamplewiseSigmoidMetric(1, score_thresh=0.5)
+    roc = ROCMetric(1, 10)
+    pdfa = PD_FA(1, 10)
+    miou = mIoU(1)
     for epoch in range(restart+1, args.epochs):
-        if epoch % 300 < 250:
+        if epoch % 300 <= 250:
             train_loss, current_lr, loss1, loss2 = train_one_epoch(model, optimizer, train_data, device, epoch, loss_func,)
-            save_ckpt({
-                'epoch': epoch,
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict()
-            }, save_path=save_pkl,
-                filename='./result_pth/Best_train_.pth.tar')
+            if epoch % 10 == 0:
+                val_loss, iou_, niou_, miou_, ture_positive_rate, false_positive_rate, recall, precision, pd, fa = \
+                         evaluate(model, val_data, device, epoch, iou_metric, niou_metric, pdfa, miou, roc, len(trainset), loss_func)
+                if iou_ > best_iou:
+                    best_iou = iou_
+                    save_ckpt({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'scheduler': scheduler.state_dict()
+                    }, save_path=save_pkl,
+                        filename='./result_pth/Best_train_.pth.tar')
         else:
             train_loss, current_lr, loss1, loss2 = train_one_epoch(model, optimizer, train_repeat_data, device, epoch,
                                                                    loss_func, )
-            save_ckpt({
-                'epoch': epoch,
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict()
-            }, save_path=save_pkl,
-                filename='./result_pth/Best_trainrepeat_.pth.tar')
+            if epoch % 10 == 0:
+                val_loss, iou_, niou_, miou_, ture_positive_rate, false_positive_rate, recall, precision, pd, fa = \
+                    evaluate(model, val_data, device, epoch, iou_metric, niou_metric, pdfa, miou, roc, len(trainset),
+                             loss_func)
+                if iou_ > best_iou_repeat:
+                    best_iou_repeat = iou_
+                    save_ckpt({
+                        'epoch': epoch,
+                        'state_dict': model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'scheduler': scheduler.state_dict()
+                    }, save_path=save_pkl,
+                        filename='./result_pth/Best_train_.pth.tar')
 
         # if epoch % 10 == 0 and epoch > -1:
         # if epoch >= 0:

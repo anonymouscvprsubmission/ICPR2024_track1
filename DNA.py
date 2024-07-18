@@ -891,7 +891,7 @@ def parse_args():
                         help='crop image size')
 
     #  hyper params for training
-    parser.add_argument('--epochs', type=int, default=1500, metavar='N',
+    parser.add_argument('--epochs', type=int, default=1000, metavar='N',
                         help='number of epochs to train (default: 110)')
     parser.add_argument('--start_epoch', type=int, default=0,
                         metavar='N', help='start epochs (default:0)')
@@ -1044,7 +1044,7 @@ class Trainer(object):
         if args.scheduler   == 'CosineAnnealingLR':
             self.scheduler  = lr_scheduler.CosineAnnealingLR( self.optimizer, T_max=args.epochs, eta_min=args.min_lr)
         self.scheduler.step()
-
+        self.args = args
         # Evaluation metrics
         self.best_iou       = 0
         self.best_recall    = [0,0,0,0,0,0,0,0,0,0,0]
@@ -1063,7 +1063,7 @@ class Trainer(object):
             labels = labels.cuda()
             # labels = torch.nn.functional.pad(labels, (2, 2, 2, 2), mode='reflect')
             # input = torch.nn.functional.pad(input, (2, 2, 2, 2), mode='reflect')
-            if args.deep_supervision == 'True':
+            if self.args.deep_supervision == 'True':
                 preds= self.model(input)
                 loss = 0
                 for pred in preds:
@@ -1093,7 +1093,7 @@ class Trainer(object):
                 labels = labels.cuda()
                 # labels = torch.nn.functional.pad(labels, (2, 2, 2, 2), mode='reflect')
                 # input = torch.nn.functional.pad(input, (2, 2, 2, 2), mode='reflect')
-                if args.deep_supervision == 'True':
+                if self.args.deep_supervision == 'True':
                     preds = self.model(input)
                     loss = 0
                     for pred in preds:
@@ -1121,7 +1121,8 @@ def main(args):
     trainer = Trainer(args)
     for epoch in range(args.start_epoch, args.epochs):
         trainer.training(epoch)
-    trainer.testing()
+        if epoch % 10 == 0 and epoch >= 20:
+            trainer.testing()
 
 def run_dna():
     args = parse_args()
