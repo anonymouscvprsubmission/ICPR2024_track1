@@ -85,7 +85,19 @@ def evaluate(model, data_loader, device, epoch, iou_metric, nIoU_metric, PD_FA, 
         # print(H, W, h, w, size)
         labels[labels > 0] = 1
         labels = torch.Tensor(labels).long().to(device)
-        pred = model(images.to(device))
+        num_iter = (images.shape[0]) // 32 if images.shape[0] % 32 == 0 else (images.shape[0]) // 32 + 1
+        predlist = []
+        for i in range(num_iter):
+            img = images[i * 32:(i + 1) * 32, :, :, :] if (i + 1) * 32 < images.shape[0] else images[i * 32:images.shape[0], :, :, :]
+            pred_ = model(img.to(device))
+            if isinstance(pred_, list):
+                pred_ = pred_[-1]
+            predlist.append(pred_)
+
+
+
+        pred = torch.cat(predlist, dim=0)
+
         if isinstance(pred, list):
             loss = 0
             for p in pred:
