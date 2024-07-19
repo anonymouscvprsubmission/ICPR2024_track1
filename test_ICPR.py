@@ -1583,8 +1583,8 @@ def main(args):
     # model_dir = args.model_dir
     model_dir1 = args.model_dir_uiu_al
     model_dir2 = args.model_dir_uiu_ll
-    model_dir3 = args.model_dir_uiu_sn
-    model_dir4 = args.model_dir_uiu_ss
+    # model_dir3 = args.model_dir_uiu_sn
+    # model_dir4 = args.model_dir_uiu_ss
 
     save_dir = args.save_dir
     bs = args.bs
@@ -1611,10 +1611,10 @@ def main(args):
     model1 = model1.to(device)
     model2 = UIUNET(3, 1)
     model2 = model2.to(device)
-    model3 = UIUNET(3, 1)
-    model3 = model3.to(device)
-    model4 = UIUNET(3, 1)
-    model4 = model4.to(device)
+    # model3 = UIUNET(3, 1)
+    # model3 = model3.to(device)
+    # model4 = UIUNET(3, 1)
+    # model4 = model4.to(device)
 
     print('model create')
     ckpt = torch.load(model_dir1, map_location=device)
@@ -1668,8 +1668,8 @@ def main(args):
     with torch.no_grad():
         model1.eval()
         model2.eval()
-        model3.eval()
-        model4.eval()
+        # model3.eval()
+        # model4.eval()
         for step, data in enumerate(val_data):
             print(step)
             images, d = data
